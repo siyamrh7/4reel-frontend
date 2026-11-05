@@ -43,7 +43,7 @@ const strings = {
     eventNotesPlaceholder: "Optioneel…",
     thisWeek: "Deze week",
     nextWeek: "Volgende week",
-    homeStudioSubtitle: "Studio overzicht · 4REEL Productions",
+    homeStudioSubtitle: "Studio overzicht · 4REEL Productions :)",
     activity: "Activiteit",
     clientActivityOverview: "Client activiteit overzicht",
     clientActivityEmpty: "Nog geen client activiteit",
