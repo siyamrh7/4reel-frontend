@@ -155,6 +155,68 @@ function FaseSelect({ value, onChange }) {
   );
 }
 
+const MAX_EXTRA_EDITORS = 3;
+
+/**
+ * Dropdowns for extra editors (besides the lead editor). Shows one select per
+ * assigned extra editor plus an empty "add" select while below the max.
+ * Choosing the empty option removes that editor.
+ */
+function ExtraEditorSelects({
+  value,
+  lead,
+  teamMembers,
+  disabled,
+  onChange,
+  placeholder,
+  selectStyle,
+}) {
+  const list = Array.isArray(value) ? value.filter(Boolean) : [];
+  const slots =
+    !disabled && list.length < MAX_EXTRA_EDITORS ? [...list, ""] : list;
+  const setAt = (index, name) => {
+    const next = [...list];
+    if (name) next[index] = name;
+    else next.splice(index, 1);
+    onChange(next.filter(Boolean));
+  };
+  return (
+    <>
+      {slots.map((current, index) => {
+        const taken = new Set(
+          [lead, ...list.filter((_, j) => j !== index)].filter(Boolean),
+        );
+        return (
+          <select
+            key={`${index}-${current}`}
+            className="form-select"
+            style={selectStyle}
+            value={current}
+            disabled={disabled}
+            onChange={(e) => setAt(index, e.target.value)}
+          >
+            <option value="">{placeholder}</option>
+            {teamMembers
+              .filter((member) => !taken.has(member.name))
+              .map((member) => (
+                <option
+                  key={member._id || member.email || member.name}
+                  value={member.name}
+                >
+                  {member.name}
+                </option>
+              ))}
+            {current &&
+              !teamMembers.some((member) => member.name === current) && (
+                <option value={current}>{current}</option>
+              )}
+          </select>
+        );
+      })}
+    </>
+  );
+}
+
 export default function WorkspaceView() {
   const { user, isTeamAdmin } = useAuth();
   const { t, lang } = useLang();
@@ -172,6 +234,7 @@ export default function WorkspaceView() {
     name: "",
     client: "",
     editor: "",
+    extraEditors: [],
     projectStage: "preproduction",
     shootDate: "",
     shootTime: "",
@@ -623,6 +686,9 @@ export default function WorkspaceView() {
         name: newBatch.name.trim(),
         client: newBatch.client,
         editor: newBatch.editor,
+        extraEditors: newBatch.extraEditors.filter(
+          (name) => name && name !== newBatch.editor,
+        ),
         projectStage: newBatch.projectStage,
         shootStatus: "planned",
         deadline: newBatch.deadline,
@@ -638,6 +704,7 @@ export default function WorkspaceView() {
             name: "",
             client: "",
             editor: "",
+            extraEditors: [],
             projectStage: "preproduction",
             shootDate: "",
             shootTime: "",
@@ -956,6 +1023,18 @@ export default function WorkspaceView() {
               {newBatchErrors.editor}
             </div>
           )}
+        </div>
+        <div className="form-group">
+          <label className="form-label">{t("wsExtraEditorsLabel")}</label>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <ExtraEditorSelects
+              value={newBatch.extraEditors}
+              lead={newBatch.editor}
+              teamMembers={teamMembers}
+              placeholder={t("wsAddEditorPlaceholder")}
+              onChange={(next) => updateNewBatchField("extraEditors", next)}
+            />
+          </div>
         </div>
         <div className="modal-footer ws-create-modal-foot">
           <button
@@ -1862,6 +1941,15 @@ export default function WorkspaceView() {
                       <option value={batch.editor}>{batch.editor}</option>
                     )}
                 </select>
+                <ExtraEditorSelects
+                  value={batch.extraEditors}
+                  lead={batch.editor}
+                  teamMembers={teamMembers}
+                  disabled={!isTeamAdmin}
+                  placeholder={t("wsAddEditorPlaceholder")}
+                  selectStyle={{ marginTop: "6px" }}
+                  onChange={(next) => setBatchField("extraEditors", next)}
+                />
               </div>
               <div className="ws-prop-tile">
                 <div className="ws-prop-tile-label">{t("wsProjectStageLabel")}</div>
@@ -3108,7 +3196,9 @@ export default function WorkspaceView() {
                               <span
                                 style={{ fontSize: 12, color: "var(--text-2)" }}
                               >
-                                {editor}
+                                {[editor, ...(b.extraEditors || [])]
+                                  .filter(Boolean)
+                                  .join(", ")}
                               </span>
                             </div>
                           ) : (
